@@ -1,58 +1,52 @@
-/*Поступило проб за отчетную неделю всего*/
-    SELECT count(income.nipchi_id) AS "Общее поступление"
-      FROM income_probes AS income
-     WHERE income.income_date BETWEEN '2022-01-24' AND '2022-01-30';
-    
-/*Поступило проб за отчетную неделю по регионам*/
-    SELECT income.region AS "Регион"
-         , count(income.nipchi_id) AS "Поступило"
-      FROM income_probes AS income
-     WHERE income.income_date BETWEEN '2022-01-24' AND '2022-01-30'
-  GROUP BY income.region
-  ORDER BY 1;
-
-/*Раскадровка по времени доставки*/ 
-    SELECT income.region AS "Регион"
-         , CASE 
-            WHEN (income.income_date - income.material_take_date) <= 3 THEN 'до 3-х дней'
-            WHEN (income.income_date - income.material_take_date) >= 5
-             AND (income.income_date - income.material_take_date) <= 7 THEN 'от 5 до 7 дней'
-            WHEN (income.income_date - income.material_take_date) > 7 THEN 'от 7 дней'
-            ELSE '4 ДНЯ!'
-           END AS "Дней до получения"
-         , count(income.nipchi_id) AS "Количество проб"
-      FROM income_probes AS income
-     WHERE income.income_date BETWEEN '2022-01-24' AND '2022-01-30' 
-  GROUP BY 1, 2
-  ORDER BY 1, 2;
-  
-  /*Поступило. Брак.*/
-  WITH
+/*Поступило. Время доставки. Брак.*/
+    WITH
     temp_table AS (
-                    SELECT income.nipchi_id
-                         , income.region
-                         , income.supply_qual 
-                         , income.status
-                         , wres.wgs_status
-                         , fsr.variant
-                         , CASE
-                            WHEN supply_qual != 'Удовлетворительно' OR status in ('Отбраковано', 'Отбраковано. Недостаточно материала', 'Отбракован', 'отбраковано') THEN 1
-                            ELSE 0
-                           END AS "defect"
-                         , CASE
-                            WHEN status = 'Загружено' OR wgs_status = 'Загружено' THEN 1
-                            ELSE 0
-                           END AS "done"
-                      FROM income_probes income
-                 LEFT JOIN wgs_results wres
-                        ON wres.nipchi_id = income.nipchi_id
-                 LEFT JOIN frag_seq_results fsr
-                        ON fsr.nipchi_id = income.nipchi_id        
-                     WHERE income.income_date BETWEEN '2022-01-24' AND '2022-01-30'
-                     )
+        SELECT income.nipchi_id
+             , income.region
+             /*, income.supply_qual 
+             , income.status
+             , wres.wgs_status
+             , fsr.variant*/
+             , CASE 
+                WHEN (income.income_date - income.material_take_date) <= 4
+                THEN 1
+                ELSE 0
+               END AS "less_than_4"
+             , CASE 
+                WHEN (income.income_date - income.material_take_date) >= 5
+                 AND (income.income_date - income.material_take_date) <= 7
+                THEN 1
+                ELSE 0
+               END AS "5_7"
+             , CASE 
+                WHEN (income.income_date - income.material_take_date) > 7
+                THEN 1
+                ELSE 0
+               END AS "more_than_7"
+             , CASE
+                WHEN supply_qual != 'Удовлетворительно'
+                  OR status in ('Отбраковано', 'Отбраковано. Недостаточно материала', 'Отбракован', 'отбраковано')
+                THEN 1
+                ELSE 0
+               END AS "defect"
+             , CASE
+                WHEN status = 'Загружено' OR wgs_status = 'Загружено'
+                THEN 1
+                ELSE 0
+               END AS "done"
+        FROM income_probes income
+   LEFT JOIN wgs_results wres
+          ON wres.nipchi_id = income.nipchi_id
+   LEFT JOIN frag_seq_results fsr
+          ON fsr.nipchi_id = income.nipchi_id        
+       WHERE income.income_date BETWEEN '2022-01-24' AND '2022-01-30'
+    )
     SELECT tt.region AS "Регион"
          , count(tt.nipchi_id) AS "Поступило"
-         , sum(tt.defect) AS "Количество брака"
+         , sum(tt.less_than_4) AS "до 4 дней"
+         , sum(tt."5_7") AS "5-7 дней"
+         , sum(more_than_7) AS "более 7 дней"
+         , sum(tt.defect) AS "отбраковано"
       FROM temp_table tt
   GROUP BY 1
   ORDER BY 1;
