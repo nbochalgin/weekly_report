@@ -107,7 +107,7 @@ WITH
          , sum(tt."5_7") AS "5-7 дней"
          , sum(tt.more_than_7) AS "более 7 дней"
          , count(tt.wgs_status) AS "wgs"
-         , COUNT(CASE WHEN tt.wgs_status IS NULL THEN 1 END) AS "frag"
+         , count(CASE WHEN tt.wgs_status IS NULL THEN 1 END) AS "frag"
          , sum(tt.delta) AS "дельта"
          , sum(tt.omicron) AS "омикрон"
          , sum(tt.other) AS "другой"
