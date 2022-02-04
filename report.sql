@@ -42,7 +42,8 @@ WITH
                 THEN 1
                 ELSE 0
                END AS "done"*/
-        FROM income_probes income
+        FROM myvar
+           , income_probes income
    LEFT JOIN wgs_results wres
           ON wres.nipchi_id = income.nipchi_id
    LEFT JOIN frag_seq_results fsr
@@ -109,7 +110,8 @@ WITH
                 THEN 1
                 ELSE 0
                END AS "done"
-        FROM income_probes income
+        FROM myvar
+           , income_probes income
    LEFT JOIN wgs_results wres
           ON wres.nipchi_id = income.nipchi_id
    LEFT JOIN frag_seq_results fsr
