@@ -11,10 +11,6 @@ WITH
     temp_table AS (
         SELECT income.nipchi_id
              , income.region
-             /*, income.supply_qual 
-             , income.status
-             , wres.wgs_status
-             , fsr.variant*/
              , CASE 
                 WHEN (income.income_date - income.material_take_date) <= 4
                 THEN 1
@@ -37,11 +33,6 @@ WITH
                 THEN 1
                 ELSE 0
                END AS "defect"
-             /*, CASE
-                WHEN status = 'Загружено' OR wgs_status = 'Загружено'
-                THEN 1
-                ELSE 0
-               END AS "done"*/
         FROM myvar
            , income_probes income
    LEFT JOIN wgs_results wres
@@ -65,8 +56,6 @@ WITH
     temp_table AS (
         SELECT income.nipchi_id
              , income.region
-             /*, income.supply_qual 
-             , income.status*/
              , wres.wgs_status
              , CASE 
                 WHEN lower(fsr.variant) ~ 'omicron'
@@ -99,12 +88,6 @@ WITH
                 THEN 1
                 ELSE 0
                END AS "more_than_7"
-             /*, CASE
-                WHEN supply_qual != 'Удовлетворительно'
-                  OR status in ('Отбраковано', 'Отбраковано. Недостаточно материала', 'Отбракован', 'отбраковано')
-                THEN 1
-                ELSE 0
-               END AS "defect"*/
              , CASE
                 WHEN status = 'Загружено' OR wgs_status = 'Загружено'
                 THEN 1
