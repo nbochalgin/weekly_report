@@ -6,7 +6,7 @@ SELECT
 INTO
     TEMP TABLE myvar;
 
-/*Поступило. Время доставки. Брак.*/
+/*Поступление, отбраковка. Раскладка по времени доставки.*/
 WITH
     temp_table AS (
         SELECT income.nipchi_id
@@ -47,7 +47,7 @@ WITH
           ON wres.nipchi_id = income.nipchi_id
    LEFT JOIN frag_seq_results fsr
           ON fsr.nipchi_id = income.nipchi_id        
-       WHERE income.income_date BETWEEN '2022-01-24' AND '2022-01-30'
+       WHERE income.income_date BETWEEN myvar.period_start AND myvar.period_end
     )
     SELECT tt.region AS "Регион"
          , count(tt.nipchi_id) AS "Поступило"
@@ -59,7 +59,7 @@ WITH
   GROUP BY 1
   ORDER BY 1;
   
-/*Исследовано до конца.*/
+/*Исследовано до конца. Раскладка по времени, платформе и варианту.*/
 WITH
     temp_table AS (
         SELECT income.nipchi_id
@@ -114,7 +114,7 @@ WITH
           ON wres.nipchi_id = income.nipchi_id
    LEFT JOIN frag_seq_results fsr
           ON fsr.nipchi_id = income.nipchi_id        
-       WHERE fsr.date_end BETWEEN '2022-01-24' AND '2022-01-30'
+       WHERE fsr.date_end BETWEEN myvar.period_start AND myvar.period_end
     )
     SELECT tt.region AS "Регион"
          , sum(tt.done) AS "Исследовано до конца"
@@ -127,6 +127,8 @@ WITH
          , sum(tt.omicron) AS "омикрон"
          , sum(tt.other) AS "другой"
       FROM temp_table tt
-     WHERE done = 1
+     WHERE tt.done = 1
   GROUP BY 1
   ORDER BY 1;
+
+DROP TABLE IF EXISTS myvar;
