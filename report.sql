@@ -1,3 +1,11 @@
+DROP TABLE IF EXISTS myvar;
+
+SELECT
+    ('2022-01-24')::date AS period_start,
+    ('2022-01-30')::date AS period_end
+INTO
+    TEMP TABLE myvar;
+
 /*Поступило. Время доставки. Брак.*/
 WITH
     temp_table AS (
@@ -112,10 +120,12 @@ WITH
          , sum(tt.done) AS "Исследовано до конца"
          , sum(tt.less_than_4) AS "до 4 дней"
          , sum(tt."5_7") AS "5-7 дней"
-         , sum(more_than_7) AS "более 7 дней"
+         , sum(tt.more_than_7) AS "более 7 дней"
          , count(tt.wgs_status) AS "wgs"
          , COUNT(CASE WHEN tt.wgs_status IS NULL THEN 1 END) AS "frag"
-         
+         , sum(tt.delta) AS "дельта"
+         , sum(tt.omicron) AS "омикрон"
+         , sum(tt.other) AS "другой"
       FROM temp_table tt
      WHERE done = 1
   GROUP BY 1
