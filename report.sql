@@ -132,5 +132,70 @@ WITH
      WHERE tt.done = 1
   GROUP BY 1
   ORDER BY 1;
+  
+/*Накопительный итог с 2022-01-01. Поступило, отбраковано, исследовано до конца. Раскладка по варианту.*/
+WITH
+    temp_table AS (
+        SELECT income.nipchi_id
+             , income.region
+             /*, income.supply_qual 
+             , income.status*/
+             , wres.wgs_status
+             , income.income_date
+             , fsr.date_end
+             , CASE 
+                WHEN lower(fsr.variant) ~ 'omicron'
+                THEN 1
+                ELSE 0
+               END AS "omicron"
+             , CASE 
+                WHEN lower(fsr.variant) ~ 'delta'
+                THEN 1
+                ELSE 0
+               END AS "delta"
+             , CASE 
+                WHEN lower(fsr.variant) ~ 'иной'
+                THEN 1
+                ELSE 0
+               END AS "other"
+             , CASE
+                WHEN supply_qual != 'Удовлетворительно'
+                  OR status in ('Отбраковано', 'Отбраковано. Недостаточно материала', 'Отбракован', 'отбраковано')
+                THEN 1
+                ELSE 0
+               END AS "defect"
+             , CASE
+                WHEN status = 'Загружено' OR wgs_status = 'Загружено'
+                THEN 1
+                ELSE 0
+               END AS "done"
+        FROM myvar
+           , income_probes income
+   LEFT JOIN wgs_results wres
+          ON wres.nipchi_id = income.nipchi_id
+   LEFT JOIN frag_seq_results fsr
+          ON fsr.nipchi_id = income.nipchi_id        
+       WHERE income.income_date BETWEEN '2022-01-01' AND myvar.period_end
+          OR fsr.date_end BETWEEN '2022-01-01' AND myvar.period_end
+    )
+    SELECT tt.region AS "Регион"
+         , count(CASE WHEN tt.income_date BETWEEN '2022-01-01' AND myvar.period_end THEN 1 END) AS "Поступило"
+         , count(CASE
+                  WHEN tt.income_date BETWEEN '2022-01-01' AND myvar.period_end 
+                   AND tt.defect = 1
+                  THEN 1
+                 END) AS "Отбраковано"
+         , count(CASE
+                  WHEN tt.date_end BETWEEN '2022-01-01' AND myvar.period_end 
+                   AND tt.done = 1
+                  THEN 1
+                 END) AS "Исследовано до конца"
+         , sum(tt.delta) AS "дельта"
+         , sum(tt.omicron) AS "омикрон"
+         , sum(tt.other) AS "другой"
+      FROM myvar
+         , temp_table tt
+  GROUP BY 1
+  ORDER BY 1; 
 
 DROP TABLE IF EXISTS myvar;
