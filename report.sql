@@ -121,8 +121,6 @@ WITH
     temp_table AS (
         SELECT income.nipchi_id
              , income.region
-             /*, income.supply_qual 
-             , income.status*/
              , wres.wgs_status
              , income.income_date
              , fsr.date_end
