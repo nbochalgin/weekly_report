@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS myvar;
 
 SELECT
-    ('2022-01-24')::date AS period_start,
-    ('2022-01-30')::date AS period_end
+    ('2022-01-31')::date AS period_start,
+    ('2022-02-06')::date AS period_end
 INTO
     TEMP TABLE myvar;
 
@@ -160,7 +160,10 @@ WITH
           OR fsr.date_end BETWEEN '2022-01-01' AND myvar.period_end
     )
     SELECT tt.region AS "Регион"
-         , count(CASE WHEN tt.income_date BETWEEN '2022-01-01' AND myvar.period_end THEN 1 END) AS "Поступило"
+         , count(CASE
+                  WHEN tt.income_date BETWEEN '2022-01-01' AND myvar.period_end
+                  THEN 1
+                 END) AS "Поступило"
          , count(CASE
                   WHEN tt.income_date BETWEEN '2022-01-01' AND myvar.period_end 
                    AND tt.defect = 1
@@ -171,9 +174,18 @@ WITH
                    AND tt.done = 1
                   THEN 1
                  END) AS "Исследовано до конца"
-         , sum(tt.delta) AS "дельта"
-         , sum(tt.omicron) AS "омикрон"
-         , sum(tt.other) AS "другой"
+         , sum(CASE
+                WHEN tt.date_end BETWEEN '2022-01-01' AND myvar.period_end 
+                THEN tt.delta
+               END) AS "дельта"
+         , sum(CASE
+                WHEN tt.date_end BETWEEN '2022-01-01' AND myvar.period_end 
+                THEN tt.omicron
+               END) AS "омикрон"
+         , sum(CASE
+                WHEN tt.date_end BETWEEN '2022-01-01' AND myvar.period_end 
+                THEN tt.other
+               END) AS "другой"
       FROM myvar
          , temp_table tt
   GROUP BY 1
