@@ -6,7 +6,7 @@ SELECT
 INTO
     TEMP TABLE myvar;
 
-/*РџРѕСЃС‚СѓРїР»РµРЅРёРµ, РѕС‚Р±СЂР°РєРѕРІРєР°. Р Р°СЃРєР»Р°РґРєР° РїРѕ РІСЂРµРјРµРЅРё РґРѕСЃС‚Р°РІРєРё.*/
+/*Поступление, отбраковка. Раскладка по времени доставки.*/
 WITH
     temp_table AS (
         SELECT income.nipchi_id
@@ -28,8 +28,8 @@ WITH
                 ELSE 0
                END AS "more_than_7"
              , CASE
-                WHEN supply_qual != 'РЈРґРѕРІР»РµС‚РІРѕСЂРёС‚РµР»СЊРЅРѕ'
-                  OR status in ('РћС‚Р±СЂР°РєРѕРІР°РЅРѕ', 'РћС‚Р±СЂР°РєРѕРІР°РЅРѕ. РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РјР°С‚РµСЂРёР°Р»Р°', 'РћС‚Р±СЂР°РєРѕРІР°РЅ', 'РѕС‚Р±СЂР°РєРѕРІР°РЅРѕ')
+                WHEN supply_qual != 'Удовлетворительно'
+                  OR status in ('Отбраковано', 'Отбраковано. Недостаточно материала', 'Отбракован', 'отбраковано')
                 THEN 1
                 ELSE 0
                END AS "defect"
@@ -41,17 +41,17 @@ WITH
           ON fsr.nipchi_id = income.nipchi_id        
        WHERE income.income_date BETWEEN myvar.period_start AND myvar.period_end
     )
-    SELECT tt.region AS "Р РµРіРёРѕРЅ"
-         , count(tt.nipchi_id) AS "РџРѕСЃС‚СѓРїРёР»Рѕ"
-         , sum(tt.less_than_4) AS "РґРѕ 4 РґРЅРµР№"
-         , sum(tt."5_7") AS "5-7 РґРЅРµР№"
-         , sum(more_than_7) AS "Р±РѕР»РµРµ 7 РґРЅРµР№"
-         , sum(tt.defect) AS "РѕС‚Р±СЂР°РєРѕРІР°РЅРѕ"
+    SELECT tt.region AS "Регион"
+         , count(tt.nipchi_id) AS "Поступило"
+         , sum(tt.less_than_4) AS "до 4 дней"
+         , sum(tt."5_7") AS "5-7 дней"
+         , sum(more_than_7) AS "более 7 дней"
+         , sum(tt.defect) AS "отбраковано"
       FROM temp_table tt
   GROUP BY 1
   ORDER BY 1;
   
-/*РСЃСЃР»РµРґРѕРІР°РЅРѕ РґРѕ РєРѕРЅС†Р°. Р Р°СЃРєР»Р°РґРєР° РїРѕ РІСЂРµРјРµРЅРё, РїР»Р°С‚С„РѕСЂРјРµ Рё РІР°СЂРёР°РЅС‚Сѓ.*/
+/*Исследовано до конца. Раскладка по времени, платформе и варианту.*/
 WITH
     temp_table AS (
         SELECT income.nipchi_id
@@ -69,7 +69,7 @@ WITH
                 ELSE 0
                END AS "delta"
              , CASE 
-                WHEN lower(fsr.variant) ~ 'РёРЅРѕР№'
+                WHEN lower(fsr.variant) ~ 'иной'
                 THEN 1
                 ELSE 0
                END AS "other"
@@ -90,7 +90,7 @@ WITH
                 ELSE 0
                END AS "more_than_7"
              , CASE
-                WHEN status IN ('Р—Р°РіСЂСѓР¶РµРЅРѕ', 'Р—Р°РіСЂСѓР¶РµРЅ') OR wgs_status = 'Р—Р°РіСЂСѓР¶РµРЅРѕ'
+                WHEN status IN ('Загружено', 'Загружен') OR wgs_status = 'Загружено'
                 THEN 1
                 ELSE 0
                END AS "done"
@@ -102,22 +102,22 @@ WITH
           ON fsr.nipchi_id = income.nipchi_id        
        WHERE fsr.date_end BETWEEN myvar.period_start AND myvar.period_end
     )
-    SELECT tt.region AS "Р РµРіРёРѕРЅ"
-         , sum(tt.done) AS "РСЃСЃР»РµРґРѕРІР°РЅРѕ РґРѕ РєРѕРЅС†Р°"
-         , sum(tt.less_than_4) AS "РґРѕ 4 РґРЅРµР№"
-         , sum(tt."5_7") AS "5-7 РґРЅРµР№"
-         , sum(tt.more_than_7) AS "Р±РѕР»РµРµ 7 РґРЅРµР№"
+    SELECT tt.region AS "Регион"
+         , sum(tt.done) AS "Исследовано до конца"
+         , sum(tt.less_than_4) AS "до 4 дней"
+         , sum(tt."5_7") AS "5-7 дней"
+         , sum(tt.more_than_7) AS "более 7 дней"
          , count(tt.wgs_status) AS "wgs"
          , count(CASE WHEN tt.wgs_status IS NULL THEN 1 END) AS "frag"
-         , sum(tt.delta) AS "РґРµР»СЊС‚Р°"
-         , sum(tt.omicron) AS "РѕРјРёРєСЂРѕРЅ"
-         , sum(tt.other) AS "РґСЂСѓРіРѕР№"
+         , sum(tt.delta) AS "дельта"
+         , sum(tt.omicron) AS "омикрон"
+         , sum(tt.other) AS "другой"
       FROM temp_table tt
      WHERE tt.done = 1
   GROUP BY 1
   ORDER BY 1;
   
-/*РќР°РєРѕРїРёС‚РµР»СЊРЅС‹Р№ РёС‚РѕРі СЃ 2022-01-01. РџРѕСЃС‚СѓРїРёР»Рѕ, РѕС‚Р±СЂР°РєРѕРІР°РЅРѕ, РёСЃСЃР»РµРґРѕРІР°РЅРѕ РґРѕ РєРѕРЅС†Р°. Р Р°СЃРєР»Р°РґРєР° РїРѕ РІР°СЂРёР°РЅС‚Сѓ.*/
+/*Накопительный итог с 2022-01-01. Поступило, отбраковано, исследовано до конца. Раскладка по варианту.*/
 WITH
     temp_table AS (
         SELECT income.nipchi_id
@@ -136,18 +136,18 @@ WITH
                 ELSE 0
                END AS "delta"
              , CASE 
-                WHEN lower(fsr.variant) ~ 'РёРЅРѕР№'
+                WHEN lower(fsr.variant) ~ 'иной'
                 THEN 1
                 ELSE 0
                END AS "other"
              , CASE
-                WHEN supply_qual != 'РЈРґРѕРІР»РµС‚РІРѕСЂРёС‚РµР»СЊРЅРѕ'
-                  OR status in ('РћС‚Р±СЂР°РєРѕРІР°РЅРѕ', 'РћС‚Р±СЂР°РєРѕРІР°РЅРѕ. РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РјР°С‚РµСЂРёР°Р»Р°', 'РћС‚Р±СЂР°РєРѕРІР°РЅ', 'РѕС‚Р±СЂР°РєРѕРІР°РЅРѕ')
+                WHEN supply_qual != 'Удовлетворительно'
+                  OR status in ('Отбраковано', 'Отбраковано. Недостаточно материала', 'Отбракован', 'отбраковано')
                 THEN 1
                 ELSE 0
                END AS "defect"
              , CASE
-                WHEN status IN ('Р—Р°РіСЂСѓР¶РµРЅРѕ', 'Р—Р°РіСЂСѓР¶РµРЅ') OR wgs_status = 'Р—Р°РіСЂСѓР¶РµРЅРѕ'
+                WHEN status IN ('Загружено', 'Загружен') OR wgs_status = 'Загружено'
                 THEN 1
                 ELSE 0
                END AS "done"
@@ -160,33 +160,33 @@ WITH
        WHERE income.income_date BETWEEN '2022-01-01' AND myvar.period_end
           OR fsr.date_end BETWEEN '2022-01-01' AND myvar.period_end
     )
-    SELECT tt.region AS "Р РµРіРёРѕРЅ"
+    SELECT tt.region AS "Регион"
          , count(CASE
                   WHEN tt.income_date BETWEEN '2022-01-01' AND myvar.period_end
                   THEN 1
-                 END) AS "РџРѕСЃС‚СѓРїРёР»Рѕ"
+                 END) AS "Поступило"
          , count(CASE
                   WHEN tt.income_date BETWEEN '2022-01-01' AND myvar.period_end 
                    AND tt.defect = 1
                   THEN 1
-                 END) AS "РћС‚Р±СЂР°РєРѕРІР°РЅРѕ"
+                 END) AS "Отбраковано"
          , count(CASE
                   WHEN tt.date_end BETWEEN '2022-01-01' AND myvar.period_end 
                    AND tt.done = 1
                   THEN 1
-                 END) AS "РСЃСЃР»РµРґРѕРІР°РЅРѕ РґРѕ РєРѕРЅС†Р°"
+                 END) AS "Исследовано до конца"
          , sum(CASE
                 WHEN tt.date_end BETWEEN '2022-01-01' AND myvar.period_end 
                 THEN tt.delta
-               END) AS "РґРµР»СЊС‚Р°"
+               END) AS "дельта"
          , sum(CASE
                 WHEN tt.date_end BETWEEN '2022-01-01' AND myvar.period_end 
                 THEN tt.omicron
-               END) AS "РѕРјРёРєСЂРѕРЅ"
+               END) AS "омикрон"
          , sum(CASE
                 WHEN tt.date_end BETWEEN '2022-01-01' AND myvar.period_end 
                 THEN tt.other
-               END) AS "РґСЂСѓРіРѕР№"
+               END) AS "другой"
       FROM myvar
          , temp_table tt
   GROUP BY 1
